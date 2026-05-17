@@ -14,8 +14,13 @@ Embedded object-following robot car built on STM32 NUCLEO-F401RE with HC-SR04 di
 mbed compile -m NUCLEO_F401RE -t GCC_ARM --flash
 ```
 
-3. Start the board. The rover drives forward when distance is greater than 15 cm and less than 30 cm and stops at or below 15 cm.
+3. Start the board. The rover drives forward when distance is greater than 15 cm and stops at or below 15 cm.
 
 ## Demonstration Video
 
-[Watch the project demo](Video%20Robot%20Car%20Follower.mp4)
+<video controls width="760" preload="metadata">
+	<source src="Video%20Robot%20Car%20Follower.mp4" type="video/mp4">
+	Your browser or GitHub view does not support embedded playback.
+</video>
+
+Fallback: [Watch the project demo](Video%20Robot%20Car%20Follower.mp4)

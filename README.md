@@ -19,3 +19,7 @@ mbed compile -m NUCLEO_F401RE -t GCC_ARM --flash
 ## Demonstration Video
 
 [Watch the project demo](Video%20Robot%20Car%20Follower.mp4)
+
+## test
+
+<video src="Video Robot Car Follower.mp4" controls width="700"></video>

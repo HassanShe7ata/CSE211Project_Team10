@@ -1,55 +1,126 @@
 #include "mbed.h"
-#include "Ultrasonic.h"
-#include "Motor.h"
-#include <cstdio>
 
-/**
- * @file main.cpp
- * @brief Object-following robot car control loop.
- *
- * The robot continuously reads front distance using HC-SR04 and commands
- * both drive motors forward when the measured distance is greater than 15 cm.
- * If distance is 15 cm or less (or measurement timed out as -1), both motors stop.
- */
+// ===== Distance Thresholds (cm) =====
+#define MIN_DIST        15       // Closer than this -> back up
+#define MAX_DIST        30       // Farther than this -> move forward
+#define ECHO_TIMEOUT_US 30000    // 30 ms max wait (~5 m range limit)
 
-// Ultrasonic front sensor pins.
-#define TRIG_PIN    D9
-#define ECHO_PIN    D10
+// ===== Motor Speed (0.0 - 1.0) =====
+#define MOTOR_SPEED     0.40f    // 40% duty cycle
 
-// Motor channel 1 driver pins.
-#define MOTOR1_PWM   D5
-#define MOTOR1_FWD   D3
-#define MOTOR1_REV   D4
+// ===== Motor Direction Pins =====
+DigitalOut in1(D4);   // Motor A - forward pin
+DigitalOut in2(D5);   // Motor A - backward pin
+DigitalOut in3(D11);  // Motor B - forward pin
+DigitalOut in4(D12);  // Motor B - backward pin
 
-// Motor channel 2 driver pins.
-#define MOTOR2_PWM   D6
-#define MOTOR2_FWD   D7
-#define MOTOR2_REV   D8
+// ===== Motor PWM (Speed Control) =====
+PwmOut ena(D9);       // Motor A enable / speed
+PwmOut enb(D10);      // Motor B enable / speed
 
-#define DRIVE_FORWARD_SPEED 0.4f
+// ===== Ultrasonic Sensor Pins =====
+DigitalOut trigPin(D6);
+DigitalIn echoPin(D7);
 
-int main() {
-    Ultrasonic frontDistanceSensor(TRIG_PIN, ECHO_PIN);
-    
-    // Initialize both drive motor channels.
-    Motor driveMotor1(MOTOR1_PWM, MOTOR1_FWD, MOTOR1_REV);
-    Motor driveMotor2(MOTOR2_PWM, MOTOR2_FWD, MOTOR2_REV);
-    
+// ===== Shared Timer for Echo Measurement =====
+Timer echoTimer;
+
+float readDistance()
+{
+    // Send 10 us trigger pulse
+    trigPin = 0;
+    wait_us(2);
+    trigPin = 1;
+    wait_us(10);
+    trigPin = 0;
+
+    // Wait for ECHO to go HIGH
+    int waitCount = 0;
+    while (echoPin == 0) {
+        wait_us(1);
+        if (++waitCount >= ECHO_TIMEOUT_US) {
+            return -1.0f;
+        }
+    }
+
+    // Measure HIGH pulse width
+    echoTimer.reset();
+    echoTimer.start();
+
+    waitCount = 0;
+    while (echoPin == 1) {
+        wait_us(1);
+        if (++waitCount >= ECHO_TIMEOUT_US) {
+            echoTimer.stop();
+            return -1.0f;
+        }
+    }
+    echoTimer.stop();
+
+    // Distance (cm) = time_us * 0.034 / 2
+    float durationUs = (float)echoTimer.elapsed_time().count();
+    return (durationUs * 0.034f) / 2.0f;
+}
+
+void moveForward()
+{
+    in1 = 1;
+    in2 = 0;
+    in3 = 1;
+    in4 = 0;
+}
+
+void moveBackward()
+{
+    in1 = 0;
+    in2 = 1;
+    in3 = 0;
+    in4 = 1;
+}
+
+void stopMotors()
+{
+    in1 = 0;
+    in2 = 0;
+    in3 = 0;
+    in4 = 0;
+}
+
+int main()
+{
+    // PWM setup (1 kHz period = 1 ms)
+    ena.period_ms(1);
+    enb.period_ms(1);
+
+    // Same speed for both motors
+    ena.write(MOTOR_SPEED);
+    enb.write(MOTOR_SPEED);
+
+    echoTimer.start();
+
+    printf("=== Object-Following Robot Started ===\r\n");
+    fflush(stdout);
+
     while (true) {
-        int measuredDistanceCm = frontDistanceSensor.getDistance();
-        
-        if (measuredDistanceCm <= 15) {
-            driveMotor1.stop();
-            driveMotor2.stop();
-            printf("Distance is %d cm (<= 15 cm). Stopping both motors.\r\n", measuredDistanceCm);
+        float distance = readDistance();
+
+        if (distance < 0.0f) {
+            printf("Distance: NO ECHO (timeout)\r\n");
+            stopMotors();
+        } else {
+            printf("Distance: %d cm\r\n", (int)distance);
+
+            if (distance < MIN_DIST) {
+                moveBackward();
+            } else if (distance > MAX_DIST) {
+                moveForward();
+            } else {
+                stopMotors();
+            }
         }
-        else {
-            driveMotor1.forward(DRIVE_FORWARD_SPEED);
-            driveMotor2.forward(DRIVE_FORWARD_SPEED);
-            printf("Object at %d cm - BOTH MOTORS MOVING FORWARD at %.1f%%\r\n", 
-                   measuredDistanceCm, DRIVE_FORWARD_SPEED * 100);
-        }
-        
-        ThisThread::sleep_for(100ms);
+        fflush(stdout);
+
+        // Wait 100 ms before next measurement
+        thread_sleep_for(100);
     }
 }

@@ -1,126 +1,62 @@
 #include "mbed.h"
+#include "PinNames.h"
+#include "Motor.h"
+#include "Ultrasonic.h"
 
 // ===== Distance Thresholds (cm) =====
-#define MIN_DIST        15       // Closer than this -> back up
-#define MAX_DIST        30       // Farther than this -> move forward
-#define ECHO_TIMEOUT_US 30000    // 30 ms max wait (~5 m range limit)
+#define MIN_DIST 15      // Closer than this -> back up
+#define MAX_DIST 30      // Farther than this -> move forward
 
 // ===== Motor Speed (0.0 - 1.0) =====
-#define MOTOR_SPEED     0.40f    // 40% duty cycle
+#define MOTOR_SPEED 0.40f
 
-// ===== Motor Direction Pins =====
-DigitalOut in1(D4);   // Motor A - forward pin
-DigitalOut in2(D5);   // Motor A - backward pin
-DigitalOut in3(D11);  // Motor B - forward pin
-DigitalOut in4(D12);  // Motor B - backward pin
+// ===== Motor Driver Pin Mapping =====
+// NUCLEO-F401RE Arduino header equivalents:
+// D4=PB_5, D5=PB_4, D6=PB_10, D7=PA_8, D9=PC_7, D10=PB_6, D11=PA_7, D12=PA_6
+#define MOTOR_A_PWM PC_7   // D9
+#define MOTOR_A_FWD PB_5   // D4
+#define MOTOR_A_REV PB_4   // D5
 
-// ===== Motor PWM (Speed Control) =====
-PwmOut ena(D9);       // Motor A enable / speed
-PwmOut enb(D10);      // Motor B enable / speed
+#define MOTOR_B_PWM PB_6   // D10
+#define MOTOR_B_FWD PA_7   // D11
+#define MOTOR_B_REV PA_6   // D12
 
-// ===== Ultrasonic Sensor Pins =====
-DigitalOut trigPin(D6);
-DigitalIn echoPin(D7);
-
-// ===== Shared Timer for Echo Measurement =====
-Timer echoTimer;
-
-float readDistance()
-{
-    // Send 10 us trigger pulse
-    trigPin = 0;
-    wait_us(2);
-    trigPin = 1;
-    wait_us(10);
-    trigPin = 0;
-
-    // Wait for ECHO to go HIGH
-    int waitCount = 0;
-    while (echoPin == 0) {
-        wait_us(1);
-        if (++waitCount >= ECHO_TIMEOUT_US) {
-            return -1.0f;
-        }
-    }
-
-    // Measure HIGH pulse width
-    echoTimer.reset();
-    echoTimer.start();
-
-    waitCount = 0;
-    while (echoPin == 1) {
-        wait_us(1);
-        if (++waitCount >= ECHO_TIMEOUT_US) {
-            echoTimer.stop();
-            return -1.0f;
-        }
-    }
-    echoTimer.stop();
-
-    // Distance (cm) = time_us * 0.034 / 2
-    float durationUs = (float)echoTimer.elapsed_time().count();
-    return (durationUs * 0.034f) / 2.0f;
-}
-
-void moveForward()
-{
-    in1 = 1;
-    in2 = 0;
-    in3 = 1;
-    in4 = 0;
-}
-
-void moveBackward()
-{
-    in1 = 0;
-    in2 = 1;
-    in3 = 0;
-    in4 = 1;
-}
-
-void stopMotors()
-{
-    in1 = 0;
-    in2 = 0;
-    in3 = 0;
-    in4 = 0;
-}
+// ===== Ultrasonic Pin Mapping =====
+#define ULTRASONIC_TRIG PB_10  // D6
+#define ULTRASONIC_ECHO PA_8   // D7
 
 int main()
 {
-    // PWM setup (1 kHz period = 1 ms)
-    ena.period_ms(1);
-    enb.period_ms(1);
-
-    // Same speed for both motors
-    ena.write(MOTOR_SPEED);
-    enb.write(MOTOR_SPEED);
-
-    echoTimer.start();
+    Ultrasonic frontSensor(ULTRASONIC_TRIG, ULTRASONIC_ECHO);
+    Motor motorA(MOTOR_A_PWM, MOTOR_A_FWD, MOTOR_A_REV);
+    Motor motorB(MOTOR_B_PWM, MOTOR_B_FWD, MOTOR_B_REV);
 
     printf("=== Object-Following Robot Started ===\r\n");
     fflush(stdout);
 
     while (true) {
-        float distance = readDistance();
+        int distanceCm = frontSensor.getDistance();
 
-        if (distance < 0.0f) {
+        if (distanceCm < 0) {
             printf("Distance: NO ECHO (timeout)\r\n");
-            stopMotors();
+            motorA.stop();
+            motorB.stop();
         } else {
-            printf("Distance: %d cm\r\n", (int)distance);
+            printf("Distance: %d cm\r\n", distanceCm);
 
-            if (distance < MIN_DIST) {
-                moveBackward();
-            } else if (distance > MAX_DIST) {
-                moveForward();
+            if (distanceCm < MIN_DIST) {
+                motorA.backward(MOTOR_SPEED);
+                motorB.backward(MOTOR_SPEED);
+            } else if (distanceCm > MAX_DIST) {
+                motorA.forward(MOTOR_SPEED);
+                motorB.forward(MOTOR_SPEED);
             } else {
-                stopMotors();
+                motorA.stop();
+                motorB.stop();
             }
         }
-        fflush(stdout);
 
-        // Wait 100 ms before next measurement
+        fflush(stdout);
         thread_sleep_for(100);
     }
 }

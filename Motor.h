@@ -1,7 +1,9 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 
-#include "mbed.h"
+#include "PinNames.h"
+#include "drivers/DigitalOut.h"
+#include "drivers/PwmOut.h"
 
 /**
  * @file Motor.h
@@ -26,6 +28,12 @@ public:
      * @param normalizedSpeed Speed command in range [0.0f, 1.0f].
      */
     void forward(float normalizedSpeed);
+
+    /**
+     * @brief Command reverse motion.
+     * @param normalizedSpeed Speed command in range [0.0f, 1.0f].
+     */
+    void backward(float normalizedSpeed);
 
     /**
      * @brief Stop the motor immediately.

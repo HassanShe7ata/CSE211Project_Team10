@@ -1,5 +1,13 @@
 # CSE211Project_Team10
 
+## Project Image
+
+![Gemini Generated Project Image](assets/images/Gemini_Generated_Image_g7lrodg7lrodg7lr.png)
+
+## Demonstration Video
+
+[Watch the project demo](assets/videos/Video%20Robot%20Car%20Follower.mp4)
+
 Embedded object-following robot car built on STM32 NUCLEO-F401RE with HC-SR04 distance sensing and dual DC motor control.
 
 The current firmware is modular:
@@ -24,11 +32,3 @@ mbed compile -m NUCLEO_F401RE -t GCC_ARM --flash
 	- Distance 15 to 30 cm: stop
 	- Distance > 30 cm: move forward
 	- No echo/timeout: stop (safety)
-
-## Demonstration Video
-
-[Watch the project demo](assets/videos/Video%20Robot%20Car%20Follower.mp4)
-
-## Project Image
-
-![Gemini Generated Project Image](assets/images/Gemini_Generated_Image_g7lrodg7lrodg7lr.png)

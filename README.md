@@ -2,7 +2,7 @@
 
 ## Project Image
 
-![Gemini Generated Project Image](assets/images/Gemini_Generated_Image_g7lrodg7lrodg7lr.png)
+![Gemini Generated Project Image](assets/images/Gemini_Generated_Image_updated.png)
 
 ## Demonstration Video
 

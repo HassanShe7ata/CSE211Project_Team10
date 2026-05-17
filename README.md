@@ -18,9 +18,4 @@ mbed compile -m NUCLEO_F401RE -t GCC_ARM --flash
 
 ## Demonstration Video
 
-<video controls width="760" preload="metadata">
-	<source src="Video%20Robot%20Car%20Follower.mp4" type="video/mp4">
-	Your browser or GitHub view does not support embedded playback.
-</video>
-
-Fallback: [Watch the project demo](Video%20Robot%20Car%20Follower.mp4)
+[Watch the project demo](Video%20Robot%20Car%20Follower.mp4)
